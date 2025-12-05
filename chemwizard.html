@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChemWizard</title>
+    <link rel="icon" type="" href="icons8-favicon.gif">
+    <style>
+        :root {
+            --primary: #1b4d89;
+            --bg: #f3f6fa;
+            --card: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin-bottom: 8px;
+            font-size: 2rem;
+        }
+
+        .container {
+            padding: 30px 20px;
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 22px;
+            margin-top: 20px;
+        }
+
+        /* Feature Cards */
+        .feature-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 20px rgba(20,30,60,0.06);
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            transition: transform .25s cubic-bezier(.22,.61,.36,1),
+                        box-shadow .25s cubic-bezier(.22,.61,.36,1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 0 16px 34px rgba(20,30,60,0.18);
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .feature-desc {
+            font-size: 0.95rem;
+            color: #444;
+        }
+
+        /* Extra Info Box */
+        .info-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 6px 20px rgba(20,30,60,0.06);
+            margin-top: 40px;
+        }
+
+        .info-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        .info-list {
+            font-size: 1rem;
+            line-height: 1.6rem;
+            color: #333;
+        }
+
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>ChemWizard</h1>
+        <p>Your mini chemistry toolkit</p>
+    </header>
+
+    <div class="container">
+        <div class="grid">
+            
+            <!-- Chemical Equation Balancer -->
+            <a href="balancer.html" target="_blank" class="feature-card">
+                <div class="feature-title">⚖ Chemical Equation Balancer</div>
+                <div class="feature-desc">
+                    Enter any chemical reaction and get it balanced instantly.
+                </div>
+            </a>
+
+            <!-- Reaction Type Predictor -->
+            <a href="predictor.html" target="_blank" class="feature-card">
+                <div class="feature-title">🔍 Reaction Type Predictor</div>
+                <div class="feature-desc">
+                    Identify reaction categories like neutralization, combustion, etc.
+                </div>
+            </a>
+
+            <!-- Mini Periodic Table -->
+            <a href="periodic.html" target="_blank" class="feature-card">
+                <div class="feature-title">📘 Mini Periodic Table</div>
+                <div class="feature-desc">
+                    Explore essential element data in a clean and simple interface.
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Group Info Card -->
+        <div class="info-card">
+            <div class="info-title">📌 Group 1 Members</div>
+            <div class="info-list">
+                25BAI10204 — <strong>Navya Agrawal</strong><br>
+                25BAI10015 — <strong>Bhoomika Kushwaha</strong><br>
+                25BAI10025 — <strong>Tanvi Agarwal</strong><br>
+                25BAI10117 — <strong>Priyanshi Saxena</strong><br>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

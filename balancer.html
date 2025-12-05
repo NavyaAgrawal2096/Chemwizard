@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ChemWizard — Equation Balancer</title>
+  <style>
+    :root{--brand:#1b4d89;--bg:#f3f6fa}
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:#111}
+    header{background:var(--brand);color:#fff;padding:18px 16px;text-align:center}
+    .container{max-width:900px;margin:22px auto;padding:12px}
+    .card{background:#fff;padding:18px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:18px}
+    input,button,select{padding:10px;font-size:15px;border-radius:6px;border:1px solid #ddd}
+    input{width:70%}
+    button{background:var(--brand);color:#fff;border:none;cursor:pointer}
+    button:hover{opacity:.95}
+    pre#eqOutput{white-space:pre-wrap;font-weight:600;margin-top:12px}
+    .examples{margin-top:10px}
+    .examples button{margin-right:8px;background:#2f6fb3}
+  </style>
+</head>
+<body>
+  <header><h1>ChemWizard — Equation Balancer</h1><div style="opacity:.9">Balance chemical equations (self-contained)</div></header>
+  <div class="container">
+    <div class="card">
+      <h2>⚖ Chemical Equation Balancer</h2>
+      <input id="eqInput" placeholder="e.g. H2 + O2 -> H2O" />
+      <button id="balBtn">Balance</button>
+      <div class="examples">
+        <small>Examples:</small>
+        <button onclick="setExample('H2 + O2 -> H2O')">H₂ + O₂ → H₂O</button>
+        <button onclick="setExample('Fe + O2 -> Fe2O3')">Fe + O₂ → Fe₂O₃</button>
+        <button onclick="setExample('C2H6 + O2 -> CO2 + H2O')">Combustion</button>
+      </div>
+      <pre id="eqOutput"></pre>
+    </div>
+  </div>
+
+<script>
+/* Fraction helper copied/adjusted from original */
+class Frac {
+  constructor(n = 0, d = 1) {
+    if (d === 0) throw 'Zero denominator';
+    if (d < 0) { n = -n; d = -d; }
+    const g = Frac.gcd(Math.round(n), Math.round(d));
+    this.n = Math.round(n / g);
+    this.d = Math.round(d / g);
+  }
+  static gcd(a,b){ a = Math.abs(a); b = Math.abs(b); if(!b) return a; return Frac.gcd(b, a % b); }
+  static lcm(a,b){ return (Math.abs(a*b) / Frac.gcd(a,b)) || 0; }
+  add(r){ return new Frac(this.n*r.d + r.n*this.d, this.d*r.d); }
+  sub(r){ return new Frac(this.n*r.d - r.n*this.d, this.d*r.d); }
+  mul(r){ return new Frac(this.n*r.n, this.d*r.d); }
+  div(r){ if(r.n===0) throw 'div0'; return new Frac(this.n*r.d, this.d*r.n); }
+  neg(){ return new Frac(-this.n, this.d); }
+  isZero(){ return this.n === 0; }
+  toNumber(){ return this.n / this.d; }
+  toString(){ return `${this.n}/${this.d}`; }
+}
+
+/* Parse single formula with parentheses (basic) */
+function parseFormula(formula) {
+  let i = 0;
+  function parseSection() {
+    const counts = {};
+    while (i < formula.length) {
+      if (formula[i] === '(') {
+        i++;
+        const inner = parseSection();
+        let num = parseNumber();
+        num = num === null ? 1 : num;
+        for (const k in inner) counts[k] = (counts[k] || 0) + inner[k] * num;
+      } else if (formula[i] === ')') {
+        i++;
+        return counts;
+      } else {
+        const m = /^[A-Z][a-z]?/.exec(formula.slice(i));
+        if (!m) throw 'Invalid formula at ' + formula.slice(i);
+        const el = m[0];
+        i += el.length;
+        let num = parseNumber();
+        num = num === null ? 1 : num;
+        counts[el] = (counts[el] || 0) + num;
+      }
+    }
+    return counts;
+  }
+  function parseNumber(){
+    const m = /^\d+/.exec(formula.slice(i));
+    if (!m) return null;
+    i += m[0].length;
+    return parseInt(m[0],10);
+  }
+  i = 0;
+  const res = parseSection();
+  if (i !== formula.length) throw 'Could not parse whole formula';
+  return res;
+}
+
+/* Balance algorithm using rational arithmetic (from your original) */
+function balanceEquationRaw(leftMols, rightMols) {
+  const allMols = leftMols.concat(rightMols);
+  const molCount = allMols.length;
+  const elSet = new Set();
+  const molCounts = allMols.map(m => parseFormula(m));
+  molCounts.forEach(obj => Object.keys(obj).forEach(k => elSet.add(k)));
+  const elements = Array.from(elSet);
+  const rows = elements.length;
+  const cols = molCount;
+  const A = [];
+  for (let r=0;r<rows;r++){
+      A[r] = [];
+      for (let c=0;c<cols;c++){
+          const el = elements[r];
+          const cnt = molCounts[c][el] || 0;
+          const sign = c < leftMols.length ? 1 : -1;
+          A[r][c] = new Frac(sign * cnt, 1);
+      }
+  }
+
+  function rref(mat) {
+      const M = mat.map(row => row.map(fr => new Frac(fr.n, fr.d)));
+      const R = M.length, C = M[0].length;
+      let r=0;
+      const pivots = [];
+      for (let c=0;c<C && r<R;c++){
+          let piv = r;
+          while (piv < R && M[piv][c].isZero()) piv++;
+          if (piv === R) continue;
+          [M[r], M[piv]] = [M[piv], M[r]];
+          const lead = M[r][c];
+          for (let j=c;j<C;j++) M[r][j] = M[r][j].div(lead);
+          for (let i=0;i<R;i++){
+              if (i===r) continue;
+              const factor = M[i][c];
+              if (!factor.isZero()){
+                  for (let j=c;j<C;j++) M[i][j] = M[i][j].sub(M[r][j].mul(factor));
+              }
+          }
+          pivots.push(c);
+          r++;
+      }
+      return { M, pivots };
+  }
+
+  const {M: R, pivots} = rref(A);
+  const pivotSet = new Set(pivots);
+  const freeCols = [];
+  for (let c=0;c<cols;c++) if (!pivotSet.has(c)) freeCols.push(c);
+
+  if (freeCols.length === 0) return null;
+
+  const solution = Array(cols).fill(new Frac(0,1));
+  for (const f of freeCols) solution[f] = new Frac(1,1);
+
+  for (let rowIndex = 0; rowIndex < R.length; rowIndex++){
+      const row = R[rowIndex];
+      let pivotCol = -1;
+      for (let c=0;c<row.length;c++){
+          if (!row[c].isZero()){
+              pivotCol = c;
+              break;
+          }
+      }
+      if (pivotCol === -1) continue;
+      let sum = new Frac(0,1);
+      for (let j=pivotCol+1;j<cols;j++){
+          if (!row[j].isZero()){
+              sum = sum.add(row[j].mul(solution[j] || new Frac(0,1)));
+          }
+      }
+      solution[pivotCol] = sum.neg();
+  }
+
+  let l = 1;
+  for (const f of solution) {
+      l = Frac.lcm(l, f.d);
+  }
+  const ints = solution.map(f => Math.round(f.n * (l / f.d)));
+  let anyPositive = ints.some(x => x > 0);
+  let anyNegative = ints.some(x => x < 0);
+  if (!anyPositive && anyNegative) {
+      for (let i=0;i<ints.length;i++) ints[i] = -ints[i];
+  }
+  let g = 0;
+  for (const v of ints) g = Frac.gcd(g, v);
+  const finalInts = ints.map(x => Math.round(x / g));
+  if (finalInts.some(x => x <= 0)) return null;
+  return { coefficients: finalInts, elements, leftMols, rightMols };
+}
+
+/* UI wiring */
+function fmtList(mols, coeffsList){
+  return mols.map((m,i) => (coeffsList[i] === 1 ? '' : coeffsList[i] + ' ') + m).join(' + ');
+}
+
+function balanceEq() {
+  const input = document.getElementById('eqInput').value.trim();
+  const outEl = document.getElementById('eqOutput');
+  outEl.innerText = '';
+  if (!input) { outEl.innerText = 'Enter an equation.'; return; }
+  if (!input.includes('->') && !input.includes('=')) {
+    outEl.innerText = "Please use '->' or '=' between reactants and products.";
+    return;
+  }
+  const arrow = input.includes('->') ? '->' : '=';
+  const [leftRaw, rightRaw] = input.split(arrow).map(s => s.trim());
+  if (!leftRaw || !rightRaw) { outEl.innerText = 'Enter both reactants and products.'; return; }
+  const leftMols = leftRaw.split('+').map(s => s.trim()).filter(Boolean);
+  const rightMols = rightRaw.split('+').map(s => s.trim()).filter(Boolean);
+  try {
+      const result = balanceEquationRaw(leftMols, rightMols);
+      if (!result) {
+          outEl.innerText = 'Could not balance (try simpler equation or check formulas).';
+          return;
+      }
+      const coeffs = result.coefficients;
+      const leftCoeffs = coeffs.slice(0, leftMols.length);
+      const rightCoeffs = coeffs.slice(leftMols.length);
+      outEl.innerText = 'Balanced Equation:\n' + fmtList(leftMols, leftCoeffs) + '  ->  ' + fmtList(rightMols, rightCoeffs);
+  } catch (e) {
+      outEl.innerText = 'Error while balancing: ' + e;
+  }
+}
+
+/* Attach events */
+document.getElementById('balBtn').addEventListener('click', balanceEq);
+document.getElementById('eqInput').addEventListener('keydown', function(e){ if(e.key==='Enter') balanceEq();});
+function setExample(s){ document.getElementById('eqInput').value = s; balanceEq(); }
+</script>
+</body>
+</html>

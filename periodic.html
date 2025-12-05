@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ChemWizard — Complete Periodic Table</title>
+
+<style>
+  :root {
+    --brand:#1b4d89;
+    --bg:#f3f6fa;
+    --cell:70px;        /* size of element box */
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: #111;
+  }
+
+  header {
+    background: var(--brand);
+    color: #fff;
+    padding: 18px 16px;
+    text-align: center;
+  }
+
+  /* Bigger, responsive card */
+  .container {
+    max-width: 1300px;
+    width: 100%;
+    margin: 22px auto;
+    padding: 12px;
+  }
+
+  .card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    min-height: 850px;
+    width: 100%;
+    overflow-x: auto;   /* scroll only if needed on smaller screens */
+  }
+
+  /* Periodic table grid 18 cols */
+  .ptable {
+    display: grid;
+    grid-template-columns: repeat(18, var(--cell));
+    grid-auto-rows: var(--cell);
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 25px;
+  }
+
+  .elem {
+    width: var(--cell);
+    height: var(--cell);
+    background: #fff;
+    border-radius: 8px;
+    padding: 6px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .elem .num { font-size: 11px; color:#666; }
+  .elem .sym { font-size: 20px; font-weight:700; }
+  .elem .name { font-size: 10px; color:#444; }
+
+  /* Lanthanides + Actinides row formatting */
+  .series-title {
+    font-weight: bold;
+    margin: 10px 0 6px 0;
+    font-size: 15px;
+  }
+
+  .series-row {
+    display: grid;
+    grid-template-columns: repeat(15, var(--cell));
+    grid-auto-rows: var(--cell);
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .info {
+    margin-top: 12px;
+    font-weight: 600;
+  }
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>ChemWizard — Complete Periodic Table</h1>
+  <div style="opacity:.9">Click an element to view details</div>
+</header>
+
+<div class="container">
+  <div class="card">
+
+    <h2>📘 Periodic Table</h2>
+
+    <!-- MAIN table -->
+    <div id="ptable" class="ptable"></div>
+
+    <!-- Lanthanides -->
+    <div class="series-title">Lanthanides (57–71)</div>
+    <div id="lanth" class="series-row"></div>
+
+    <!-- Actinides -->
+    <div class="series-title">Actinides (89–103)</div>
+    <div id="act" class="series-row"></div>
+
+    <p id="elemInfo" class="info">Select an element to view details.</p>
+  </div>
+</div>
+
+<script>
+/* ---- Full 118 Elements ---- */
+const elements = [
+  // Main periodic table placement with group+period
+  {Z:1,sym:"H",name:"Hydrogen",mass:"1.008",group:1,period:1},
+  {Z:2,sym:"He",name:"Helium",mass:"4.0026",group:18,period:1},
+
+  {Z:3,sym:"Li",name:"Lithium",mass:"6.94",group:1,period:2},
+  {Z:4,sym:"Be",name:"Beryllium",mass:"9.0122",group:2,period:2},
+  {Z:5,sym:"B",name:"Boron",mass:"10.81",group:13,period:2},
+  {Z:6,sym:"C",name:"Carbon",mass:"12.011",group:14,period:2},
+  {Z:7,sym:"N",name:"Nitrogen",mass:"14.007",group:15,period:2},
+  {Z:8,sym:"O",name:"Oxygen",mass:"15.999",group:16,period:2},
+  {Z:9,sym:"F",name:"Fluorine",mass:"18.998",group:17,period:2},
+  {Z:10,sym:"Ne",name:"Neon",mass:"20.180",group:18,period:2},
+
+  {Z:11,sym:"Na",name:"Sodium",mass:"22.99",group:1,period:3},
+  {Z:12,sym:"Mg",name:"Magnesium",mass:"24.305",group:2,period:3},
+  {Z:13,sym:"Al",name:"Aluminium",mass:"26.982",group:13,period:3},
+  {Z:14,sym:"Si",name:"Silicon",mass:"28.085",group:14,period:3},
+  {Z:15,sym:"P",name:"Phosphorus",mass:"30.974",group:15,period:3},
+  {Z:16,sym:"S",name:"Sulfur",mass:"32.06",group:16,period:3},
+  {Z:17,sym:"Cl",name:"Chlorine",mass:"35.45",group:17,period:3},
+  {Z:18,sym:"Ar",name:"Argon",mass:"39.948",group:18,period:3},
+
+  {Z:19,sym:"K",name:"Potassium",mass:"39.098",group:1,period:4},
+  {Z:20,sym:"Ca",name:"Calcium",mass:"40.078",group:2,period:4},
+  {Z:21,sym:"Sc",name:"Scandium",mass:"44.956",group:3,period:4},
+  {Z:22,sym:"Ti",name:"Titanium",mass:"47.867",group:4,period:4},
+  {Z:23,sym:"V",name:"Vanadium",mass:"50.942",group:5,period:4},
+  {Z:24,sym:"Cr",name:"Chromium",mass:"51.996",group:6,period:4},
+  {Z:25,sym:"Mn",name:"Manganese",mass:"54.938",group:7,period:4},
+  {Z:26,sym:"Fe",name:"Iron",mass:"55.845",group:8,period:4},
+  {Z:27,sym:"Co",name:"Cobalt",mass:"58.933",group:9,period:4},
+  {Z:28,sym:"Ni",name:"Nickel",mass:"58.693",group:10,period:4},
+  {Z:29,sym:"Cu",name:"Copper",mass:"63.546",group:11,period:4},
+  {Z:30,sym:"Zn",name:"Zinc",mass:"65.38",group:12,period:4},
+  {Z:31,sym:"Ga",name:"Gallium",mass:"69.723",group:13,period:4},
+  {Z:32,sym:"Ge",name:"Germanium",mass:"72.630",group:14,period:4},
+  {Z:33,sym:"As",name:"Arsenic",mass:"74.922",group:15,period:4},
+  {Z:34,sym:"Se",name:"Selenium",mass:"78.971",group:16,period:4},
+  {Z:35,sym:"Br",name:"Bromine",mass:"79.904",group:17,period:4},
+  {Z:36,sym:"Kr",name:"Krypton",mass:"83.798",group:18,period:4},
+
+  /* --- Element 37–56 before lanthanides --- */
+  {Z:37,sym:"Rb",name:"Rubidium",mass:"85.468",group:1,period:5},
+  {Z:38,sym:"Sr",name:"Strontium",mass:"87.62",group:2,period:5},
+  {Z:39,sym:"Y",name:"Yttrium",mass:"88.906",group:3,period:5},
+  {Z:40,sym:"Zr",name:"Zirconium",mass:"91.224",group:4,period:5},
+  {Z:41,sym:"Nb",name:"Niobium",mass:"92.906",group:5,period:5},
+  {Z:42,sym:"Mo",name:"Molybdenum",mass:"95.95",group:6,period:5},
+  {Z:43,sym:"Tc",name:"Technetium",mass:"98",group:7,period:5},
+  {Z:44,sym:"Ru",name:"Ruthenium",mass:"101.07",group:8,period:5},
+  {Z:45,sym:"Rh",name:"Rhodium",mass:"102.91",group:9,period:5},
+  {Z:46,sym:"Pd",name:"Palladium",mass:"106.42",group:10,period:5},
+  {Z:47,sym:"Ag",name:"Silver",mass:"107.87",group:11,period:5},
+  {Z:48,sym:"Cd",name:"Cadmium",mass:"112.41",group:12,period:5},
+  {Z:49,sym:"In",name:"Indium",mass:"114.82",group:13,period:5},
+  {Z:50,sym:"Sn",name:"Tin",mass:"118.71",group:14,period:5},
+  {Z:51,sym:"Sb",name:"Antimony",mass:"121.76",group:15,period:5},
+  {Z:52,sym:"Te",name:"Tellurium",mass:"127.60",group:16,period:5},
+  {Z:53,sym:"I",name:"Iodine",mass:"126.90",group:17,period:5},
+  {Z:54,sym:"Xe",name:"Xenon",mass:"131.29",group:18,period:5},
+
+  /* --- Elements 72–86 after lanthanides --- */
+  {Z:72,sym:"Hf",name:"Hafnium",mass:"178.49",group:4,period:6},
+  {Z:73,sym:"Ta",name:"Tantalum",mass:"180.95",group:5,period:6},
+  {Z:74,sym:"W",name:"Tungsten",mass:"183.84",group:6,period:6},
+  {Z:75,sym:"Re",name:"Rhenium",mass:"186.21",group:7,period:6},
+  {Z:76,sym:"Os",name:"Osmium",mass:"190.23",group:8,period:6},
+  {Z:77,sym:"Ir",name:"Iridium",mass:"192.22",group:9,period:6},
+  {Z:78,sym:"Pt",name:"Platinum",mass:"195.08",group:10,period:6},
+  {Z:79,sym:"Au",name:"Gold",mass:"196.97",group:11,period:6},
+  {Z:80,sym:"Hg",name:"Mercury",mass:"200.59",group:12,period:6},
+  {Z:81,sym:"Tl",name:"Thallium",mass:"204.38",group:13,period:6},
+  {Z:82,sym:"Pb",name:"Lead",mass:"207.2",group:14,period:6},
+  {Z:83,sym:"Bi",name:"Bismuth",mass:"208.98",group:15,period:6},
+  {Z:84,sym:"Po",name:"Polonium",mass:"209",group:16,period:6},
+  {Z:85,sym:"At",name:"Astatine",mass:"210",group:17,period:6},
+  {Z:86,sym:"Rn",name:"Radon",mass:"222",group:18,period:6},
+
+  /* --- Elements 104–118 after actinides --- */
+  {Z:104,sym:"Rf",name:"Rutherfordium",mass:"267",group:4,period:7},
+  {Z:105,sym:"Db",name:"Dubnium",mass:"268",group:5,period:7},
+  {Z:106,sym:"Sg",name:"Seaborgium",mass:"269",group:6,period:7},
+  {Z:107,sym:"Bh",name:"Bohrium",mass:"270",group:7,period:7},
+  {Z:108,sym:"Hs",name:"Hassium",mass:"269",group:8,period:7},
+  {Z:109,sym:"Mt",name:"Meitnerium",mass:"278",group:9,period:7},
+  {Z:110,sym:"Ds",name:"Darmstadtium",mass:"281",group:10,period:7},
+  {Z:111,sym:"Rg",name:"Roentgenium",mass:"282",group:11,period:7},
+  {Z:112,sym:"Cn",name:"Copernicium",mass:"285",group:12,period:7},
+  {Z:113,sym:"Nh",name:"Nihonium",mass:"286",group:13,period:7},
+  {Z:114,sym:"Fl",name:"Flerovium",mass:"289",group:14,period:7},
+  {Z:115,sym:"Mc",name:"Moscovium",mass:"290",group:15,period:7},
+  {Z:116,sym:"Lv",name:"Livermorium",mass:"293",group:16,period:7},
+  {Z:117,sym:"Ts",name:"Tennessine",mass:"294",group:17,period:7},
+  {Z:118,sym:"Og",name:"Oganesson",mass:"294",group:18,period:7},
+];
+
+/* Lanthanides and Actinides arrays */
+const lanthanides = [
+  {Z:57,sym:"La",name:"Lanthanum",mass:"138.91"},
+  {Z:58,sym:"Ce",name:"Cerium",mass:"140.12"},
+  {Z:59,sym:"Pr",name:"Praseodymium",mass:"140.91"},
+  {Z:60,sym:"Nd",name:"Neodymium",mass:"144.24"},
+  {Z:61,sym:"Pm",name:"Promethium",mass:"145"},
+  {Z:62,sym:"Sm",name:"Samarium",mass:"150.36"},
+  {Z:63,sym:"Eu",name:"Europium",mass:"151.96"},
+  {Z:64,sym:"Gd",name:"Gadolinium",mass:"157.25"},
+  {Z:65,sym:"Tb",name:"Terbium",mass:"158.93"},
+  {Z:66,sym:"Dy",name:"Dysprosium",mass:"162.50"},
+  {Z:67,sym:"Ho",name:"Holmium",mass:"164.93"},
+  {Z:68,sym:"Er",name:"Erbium",mass:"167.26"},
+  {Z:69,sym:"Tm",name:"Thulium",mass:"168.93"},
+  {Z:70,sym:"Yb",name:"Ytterbium",mass:"173.04"},
+  {Z:71,sym:"Lu",name:"Lutetium",mass:"174.97"},
+];
+
+const actinides = [
+  {Z:89,sym:"Ac",name:"Actinium",mass:"227"},
+  {Z:90,sym:"Th",name:"Thorium",mass:"232.04"},
+  {Z:91,sym:"Pa",name:"Protactinium",mass:"231.04"},
+  {Z:92,sym:"U",name:"Uranium",mass:"238.03"},
+  {Z:93,sym:"Np",name:"Neptunium",mass:"237"},
+  {Z:94,sym:"Pu",name:"Plutonium",mass:"244"},
+  {Z:95,sym:"Am",name:"Americium",mass:"243"},
+  {Z:96,sym:"Cm",name:"Curium",mass:"247"},
+  {Z:97,sym:"Bk",name:"Berkelium",mass:"247"},
+  {Z:98,sym:"Cf",name:"Californium",mass:"251"},
+  {Z:99,sym:"Es",name:"Einsteinium",mass:"252"},
+  {Z:100,sym:"Fm",name:"Fermium",mass:"257"},
+  {Z:101,sym:"Md",name:"Mendelevium",mass:"258"},
+  {Z:102,sym:"No",name:"Nobelium",mass:"259"},
+  {Z:103,sym:"Lr",name:"Lawrencium",mass:"266"},
+];
+
+/* Render main table with empty cells */
+function buildMainTable() {
+  const grid = [];
+
+  // fill 7 periods × 18 groups with null
+  for (let p = 1; p <= 7; p++) {
+    for (let g = 1; g <= 18; g++) {
+      grid.push(null);
+    }
+  }
+
+  // place main elements
+  elements.forEach(el => {
+    const index = (el.period - 1) * 18 + (el.group - 1);
+    grid[index] = el;
+  });
+
+  // render
+  const container = document.getElementById("ptable");
+  container.innerHTML = "";
+
+  grid.forEach(item => {
+    if (item === null) {
+      const blank = document.createElement("div");
+      blank.style.width = "var(--cell)";
+      blank.style.height = "var(--cell)";
+      container.appendChild(blank);
+    } else {
+      const cell = document.createElement("div");
+      cell.className = "elem";
+      cell.innerHTML = `
+        <div class="num">${item.Z}</div>
+        <div class="sym">${item.sym}</div>
+        <div class="name">${item.name}</div>
+      `;
+      cell.onclick = () =>
+        document.getElementById("elemInfo").innerText =
+          `${item.name} (${item.sym}) — Z=${item.Z}, Mass=${item.mass}`;
+      container.appendChild(cell);
+    }
+  });
+}
+
+/* Render lanthanides + actinides */
+function buildSeries(list, id) {
+  const box = document.getElementById(id);
+  box.innerHTML = "";
+
+  list.forEach(el => {
+    const cell = document.createElement("div");
+    cell.className = "elem";
+    cell.innerHTML = `
+      <div class="num">${el.Z}</div>
+      <div class="sym">${el.sym}</div>
+      <div class="name">${el.name}</div>
+    `;
+    cell.onclick = () =>
+      document.getElementById("elemInfo").innerText =
+        `${el.name} (${el.sym}) — Z=${el.Z}, Mass=${el.mass}`;
+    box.appendChild(cell);
+  });
+}
+
+/* initialize */
+buildMainTable();
+buildSeries(lanthanides, "lanth");
+buildSeries(actinides, "act");
+
+</script>
+
+</body>
+</html>

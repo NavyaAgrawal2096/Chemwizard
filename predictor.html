@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ChemWizard — Reaction Predictor</title>
+  <style>
+    :root{--brand:#1b4d89;--bg:#f3f6fa}
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:#111}
+    header{background:var(--brand);color:#fff;padding:18px 16px;text-align:center}
+    .container{max-width:900px;margin:22px auto;padding:12px}
+    .card{background:#fff;padding:18px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:18px}
+    input,textarea,button{padding:10px;font-size:15px;border-radius:6px;border:1px solid #ddd}
+    input{width:70%}
+    button{background:var(--brand);color:#fff;border:none;cursor:pointer}
+    button:hover{opacity:.95}
+    .output{font-weight:700;margin-top:12px}
+    .rules{font-size:13px;color:#555;margin-top:8px}
+  </style>
+</head>
+<body>
+  <header><h1>ChemWizard — Reaction Type Predictor</h1><div style="opacity:.9">Rule-based demo (shows likely reaction class)</div></header>
+  <div class="container">
+    <div class="card">
+      <h2>🔍 Predict Reaction Type</h2>
+      <input id="rxInput" placeholder="Enter reagents or a short equation, e.g. HCl + NaOH" />
+      <button id="predBtn">Predict</button>
+      <div id="rxOutput" class="output"></div>
+      <div class="rules">
+        <strong>Rules used (examples):</strong>
+        <ul>
+          <li>If an acid and a base appear → Neutralization</li>
+          <li>If O₂ and an organic (C/H) appear → Combustion</li>
+          <li>If a metal replaces another in a salt-like form → Single displacement</li>
+          <li>Otherwise returns a best-guess demo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+<script>
+function predictReaction(){
+  const raw = document.getElementById('rxInput').value.trim();
+  const out = document.getElementById('rxOutput');
+  out.innerText = '';
+  if (!raw) { out.innerText = 'Enter reagents (e.g. HCl + NaOH)'; return; }
+  const eq = raw.toLowerCase();
+
+  // simple helper checks:
+  const has = (pat) => (new RegExp('\\b' + pat + '\\b')).test(eq);
+
+  // Basic acid list and base list (demo)
+  const commonAcids = ['hcl','h2so4','hno3','h3po4','hf','ch3cooh'];
+  const commonBases = ['naoh','koh','nh3','ca(oh)2','koh','naoh'];
+
+  const containsAcid = commonAcids.some(a => eq.includes(a));
+  const containsBase = commonBases.some(b => eq.includes(b));
+
+  // Simple patterns
+  if (containsAcid && containsBase) {
+    out.innerText = 'Neutralization (acid + base → salt + water)';
+    return;
+  }
+  if ((has('o2') || has('oxygen')) && /[cC][0-9]*|h[0-9]*|ch|c\d|[a-z]*cho|c2h/.test(eq)) {
+    out.innerText = 'Likely Combustion (oxygen + organic fuel)';
+    return;
+  }
+  if (eq.includes('+') && !eq.includes('->')) {
+    out.innerText = 'Probably a simple mixture or combination (not a formatted equation).';
+    return;
+  }
+
+  // Single displacement heuristic: metal element + salt
+  const metals = ['fe','zn','cu','ag','al','mg','na','k','li','ca'];
+  const metalFound = metals.find(m => eq.includes(m));
+  if (metalFound && /([a-z]{1,2}[^ ]*salt|cl|so4|no3|br|i)/.test(eq)) {
+    out.innerText = 'Possible Single Displacement (metal may displace another element in a compound)';
+    return;
+  }
+
+  out.innerText = 'Could not classify confidently — this is a rule-based demo. Try a clearer reagent pair (e.g. "HCl + NaOH", or a full equation "C3H8 + O2 -> CO2 + H2O").';
+}
+
+/* UI events */
+document.getElementById('predBtn').addEventListener('click', predictReaction);
+document.getElementById('rxInput').addEventListener('keydown', function(e){ if(e.key==='Enter') predictReaction();});
+</script>
+</body>
+</html>
